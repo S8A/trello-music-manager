@@ -42,6 +42,8 @@ class MusicBoardManager:
            "Accept": "application/json",
         }
 
+        self.albums_checklist_name = "Albums"
+
         self.album_tasks = [
             "Download",
             "Add metadata",
@@ -130,7 +132,7 @@ class MusicBoardManager:
         self, artist_card_id: str
     ) -> Optional[Dict[str, Any]]:
         """Get the artist's albums checklist."""
-        return self.get_checklist(artist_card_id, "Albums")
+        return self.get_checklist(artist_card_id, self.albums_checklist_name)
 
     def create_artist_card(
         self, artist: str, albums: List[str], pos: str = "bottom"
@@ -141,7 +143,7 @@ class MusicBoardManager:
         if not card:
             return None
 
-        checklist = self.create_checklist(card["id"], "Albums")
+        checklist = self.create_checklist(card["id"], self.albums_checklist_name)
 
         if not checklist:
             self.delete_card(card["id"])
