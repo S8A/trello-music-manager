@@ -88,7 +88,8 @@ def load_data(manager: MusicBoardManager, directory: str, albums_filename: str) 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        "music.py", description="Manage Trello board of artists and albums."
+        prog="trello_music_manager",
+        description="Manage Trello board of artists and albums.",
     )
     parser.add_argument(
         "directory", help="Directory with artists' directories."
