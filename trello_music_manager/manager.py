@@ -44,19 +44,25 @@ class MusicBoardManager:
 
         self.lists = self.get_board_lists()
 
-    def make_request(
-        self, url: str, method: str, query_params: Optional[Dict[str, Any]] = None
-    ) -> str:
-        """Make a JSON API request with the given parameters."""
-        params = {
-            "key": self.api_key,
-            "token": self.token,
-        }
-        if query_params:
-            for k, v in query_params.items():
-                params[k] = v
+    @property
+    def artists_list(self) -> Optional[Dict[str, Any]]:
+        """Get Trello list which holds artists' cards."""
+        return self.lists.get("artists", None)
 
-        return requests.request(method, url, headers=self.headers, params=params)
+    @property
+    def albums_pending_list(self) -> Optional[Dict[str, Any]]:
+        """Get Trello list which holds albums that are pending."""
+        return self.lists.get("albums_pending", None)
+
+    @property
+    def albums_doing_list(self) -> Optional[Dict[str, Any]]:
+        """Get Trello list which holds albums that are in progress."""
+        return self.lists.get("albums_doing", None)
+
+    @property
+    def albums_done_list(self) -> Optional[Dict[str, Any]]:
+        """Get Trello list which holds albums that are done."""
+        return self.lists.get("albums_done", None)
 
     def get_board_lists(self) -> Dict[str, Dict[str, Any]]:
         """Get lists of the Trello music board."""
@@ -93,26 +99,6 @@ class MusicBoardManager:
                 raise MusicBoardManagerConfigError(f"Could not find {k} board.")
 
         return lists
-
-    @property
-    def artists_list(self) -> Optional[Dict[str, Any]]:
-        """Get Trello list which holds artists' cards."""
-        return self.lists.get("artists", None)
-
-    @property
-    def albums_pending_list(self) -> Optional[Dict[str, Any]]:
-        """Get Trello list which holds albums that are pending."""
-        return self.lists.get("albums_pending", None)
-
-    @property
-    def albums_doing_list(self) -> Optional[Dict[str, Any]]:
-        """Get Trello list which holds albums that are in progress."""
-        return self.lists.get("albums_doing", None)
-
-    @property
-    def albums_done_list(self) -> Optional[Dict[str, Any]]:
-        """Get Trello list which holds albums that are done."""
-        return self.lists.get("albums_done", None)
 
     def get_artists_cards(self) -> List[Dict[str, Any]]:
         """Get a list of all cards in the artists' list."""
@@ -153,92 +139,6 @@ class MusicBoardManager:
         checkitems_url = "https://api.trello.com/1/checklists/{id}/checkItems"
         response = self.make_request(
             checkitems_url.format(id=albums_checklist_id), "GET"
-        )
-
-        if response.status_code == 200:
-            return json.loads(response.text)
-
-    def create_card(
-        self, list_id: str, name: str, pos: str = "bottom"
-    ) -> Optional[Dict[str, Any]]:
-        """Create a card on the specified list."""
-        url = "https://api.trello.com/1/cards"
-        query = {
-            "idList": list_id,
-            "name": name,
-            "pos": pos,
-        }
-        response = self.make_request(url, "POST", query_params=query)
-        if response.status_code == 200:
-            return json.loads(response.text)
-
-    def create_checklist(
-        self, card_id: str, name: str, pos: str = "bottom"
-    ) -> Optional[Dict[str, Any]]:
-        """Create a checklist on the specified card."""
-        url = "https://api.trello.com/1/checklists"
-        query = {
-            "idCard": card_id,
-            "name": name,
-            "pos": pos,
-        }
-        response = self.make_request(url, "POST", query_params=query)
-        if response.status_code == 200:
-            return json.loads(response.text)
-
-    def add_items_to_checklist(
-        self, checklist_id: str, items: List[str], pos: str = "bottom"
-    ) -> List[Dict[str, Any]]:
-        """Add the given items to the specified checklist"""
-        added_checkitems = []
-        url = "https://api.trello.com/1/checklists/{id}/checkItems"
-        for item in items:
-            query = {
-                "name": item,
-                "pos": pos
-            }
-            response = self.make_request(
-                url.format(id=checklist_id), "POST", query_params=query
-            )
-
-            if response.status_code == 200:
-                added_checkitems.append(json.loads(response.text))
-        return added_checkitems
-
-    def get_card(self, card_id: str) -> Optional[Dict[str, Any]]:
-        """Get the card by its ID."""
-        url = "https://api.trello.com/1/cards/{id}"
-        response = self.make_request(url.format(id=card_id), "GET")
-        if response.status_code == 200:
-            return json.loads(response.text)
-
-    def delete_card(self, card_id: str) -> bool:
-        """Delete the card with the given ID."""
-        url = "https://api.trello.com/1/cards/{id}"
-        response = self.make_request(url.format(id=card_id), "DELETE")
-        return response.status_code == 200
-
-    def update_checkitem(
-        self,
-        card_id: str,
-        checkitem_id: str,
-        name: Optional[str] = None,
-        state: Optional[str] = None
-    ) -> Optional[Dict[str, Any]]:
-        """Update a checkitem's name and/or state."""
-        if not name and not state:
-            return None
-
-        url = "https://api.trello.com/1/cards/{id}/checkItem/{idCheckItem}"
-
-        query = {}
-        if name:
-            query["name"] = name
-        if state:
-            query["state"] = state
-
-        response = self.make_request(
-            url.format(id=card_id, idCheckItem=checkitem_id), "PUT", query_params=query,
         )
 
         if response.status_code == 200:
@@ -382,3 +282,103 @@ class MusicBoardManager:
                             updated_checkitems.append(updated_checkitem)
 
             return updated_checkitems
+
+    def create_card(
+        self, list_id: str, name: str, pos: str = "bottom"
+    ) -> Optional[Dict[str, Any]]:
+        """Create a card on the specified list."""
+        url = "https://api.trello.com/1/cards"
+        query = {
+            "idList": list_id,
+            "name": name,
+            "pos": pos,
+        }
+        response = self.make_request(url, "POST", query_params=query)
+        if response.status_code == 200:
+            return json.loads(response.text)
+
+    def get_card(self, card_id: str) -> Optional[Dict[str, Any]]:
+        """Get the card by its ID."""
+        url = "https://api.trello.com/1/cards/{id}"
+        response = self.make_request(url.format(id=card_id), "GET")
+        if response.status_code == 200:
+            return json.loads(response.text)
+
+    def delete_card(self, card_id: str) -> bool:
+        """Delete the card with the given ID."""
+        url = "https://api.trello.com/1/cards/{id}"
+        response = self.make_request(url.format(id=card_id), "DELETE")
+        return response.status_code == 200
+
+    def create_checklist(
+        self, card_id: str, name: str, pos: str = "bottom"
+    ) -> Optional[Dict[str, Any]]:
+        """Create a checklist on the specified card."""
+        url = "https://api.trello.com/1/checklists"
+        query = {
+            "idCard": card_id,
+            "name": name,
+            "pos": pos,
+        }
+        response = self.make_request(url, "POST", query_params=query)
+        if response.status_code == 200:
+            return json.loads(response.text)
+
+    def add_items_to_checklist(
+        self, checklist_id: str, items: List[str], pos: str = "bottom"
+    ) -> List[Dict[str, Any]]:
+        """Add the given items to the specified checklist"""
+        added_checkitems = []
+        url = "https://api.trello.com/1/checklists/{id}/checkItems"
+        for item in items:
+            query = {
+                "name": item,
+                "pos": pos
+            }
+            response = self.make_request(
+                url.format(id=checklist_id), "POST", query_params=query
+            )
+
+            if response.status_code == 200:
+                added_checkitems.append(json.loads(response.text))
+        return added_checkitems
+
+    def update_checkitem(
+        self,
+        card_id: str,
+        checkitem_id: str,
+        name: Optional[str] = None,
+        state: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        """Update a checkitem's name and/or state."""
+        if not name and not state:
+            return None
+
+        url = "https://api.trello.com/1/cards/{id}/checkItem/{idCheckItem}"
+
+        query = {}
+        if name:
+            query["name"] = name
+        if state:
+            query["state"] = state
+
+        response = self.make_request(
+            url.format(id=card_id, idCheckItem=checkitem_id), "PUT", query_params=query,
+        )
+
+        if response.status_code == 200:
+            return json.loads(response.text)
+
+    def make_request(
+        self, url: str, method: str, query_params: Optional[Dict[str, Any]] = None
+    ) -> str:
+        """Make a JSON API request with the given parameters."""
+        params = {
+            "key": self.api_key,
+            "token": self.token,
+        }
+        if query_params:
+            for k, v in query_params.items():
+                params[k] = v
+
+        return requests.request(method, url, headers=self.headers, params=params)
