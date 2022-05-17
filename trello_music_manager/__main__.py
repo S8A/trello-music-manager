@@ -6,7 +6,7 @@ import argparse
 import dotenv
 import os
 
-from trello_music_manager.manager import MusicBoardManager
+from trello_music_manager.manager import MusicBoardManager, MusicBoardManagerConfigError
 from trello_music_manager.utils import cd, read_file_lines_stripped
 
 
@@ -109,14 +109,17 @@ if __name__ == "__main__":
         if not config.get(required_variable, None):
             exit(1)
 
-    manager = MusicBoardManager(
-        config["TRELLO_API_KEY"],
-        config["TRELLO_TOKEN"],
-        config["TRELLO_BOARD_ID"],
-        config["ARTISTS_LIST"],
-        config["ALBUMS_PENDING_LIST"],
-        config["ALBUMS_DOING_LIST"],
-        config["ALBUMS_DONE_LIST"],
-    )
+    try:
+        manager = MusicBoardManager(
+            config["TRELLO_API_KEY"],
+            config["TRELLO_TOKEN"],
+            config["TRELLO_BOARD_ID"],
+            config["ARTISTS_LIST"],
+            config["ALBUMS_PENDING_LIST"],
+            config["ALBUMS_DOING_LIST"],
+            config["ALBUMS_DONE_LIST"],
+        )
+    except MusicBoardManagerConfigError as e:
+        print(e)
 
     load_data(manager, args.directory, config["ALBUMS_FILENAME"])
