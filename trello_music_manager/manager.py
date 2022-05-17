@@ -7,7 +7,7 @@ import requests
 
 class MusicBoardManagerConfigError(Exception):
     """Raised when the Trello music board manager is improperly configured."""
-    
+
     def __init__(self, message):
         """Create a MusicBoardManagerConfigError with the given message."""
         self.message = message
@@ -117,7 +117,7 @@ class MusicBoardManager:
     def get_artists_cards(self) -> List[Dict[str, Any]]:
         """Get a list of all cards in the artists' list."""
         url = "https://api.trello.com/1/lists/{id}/cards"
-        artists_list_id = self.artists_list.get("id", "")
+        artists_list_id = self.artists_list["id"]
         response = self.make_request(url.format(id=artists_list_id), "GET")
         if response.status_code == 200:
             return json.loads(response.text)
@@ -133,32 +133,23 @@ class MusicBoardManager:
                 artist_card = card
         return artist_card
 
-    def get_artist_albums_checklist(self, artist: str) -> Optional[Dict[str, Any]]:
+    def get_artist_card_albums_checklist(
+        self, artist_card_id: str
+    ) -> Optional[Dict[str, Any]]:
         """Get the artist's albums checklist."""
-        artist_card = self.get_artist_card(artist)
+        checklists_url = "https://api.trello.com/1/cards/{id}/checklists"
+        response = self.make_request(checklists_url.format(id=artist_card_id), "GET")
 
-        if artist_card:
-            checklists = []
-            checklists_url = "https://api.trello.com/1/cards/{id}/checklists"
-            response = self.make_request(
-                checklists_url.format(id=artist_card["id"]), "GET"
-            )
-
-            if response.status_code == 200:
-                checklists = json.loads(response.text)
-
+        if response.status_code == 200:
+            checklists = json.loads(response.text)
             for checklist in checklists:
                 if "name" in checklist and checklist["name"] == "Albums":
                     return checklist
 
-    def get_artist_albums_checkitems(
-        self, artist: str, albums_checklist_id: Optional[str] = None
+    def get_artist_card_albums_checkitems(
+        self, albums_checklist_id: str
     ) -> Optional[List[Dict[str, Any]]]:
         """Get the items of the given artist's card's albums checklist."""
-        if not albums_checklist_id:
-            albums_checklist = self.get_artist_albums_checklist(artist)
-            return self.get_artist_albums_checkitems(artist, albums_checklist["id"])
-
         checkitems_url = "https://api.trello.com/1/checklists/{id}/checkItems"
         response = self.make_request(
             checkitems_url.format(id=albums_checklist_id), "GET"
@@ -197,9 +188,9 @@ class MusicBoardManager:
 
     def add_items_to_checklist(
         self, checklist_id: str, items: List[str], pos: str = "bottom"
-    ) -> List[str]:
+    ) -> List[Dict[str, Any]]:
         """Add the given items to the specified checklist"""
-        added_items_responses = []
+        added_checkitems = []
         url = "https://api.trello.com/1/checklists/{id}/checkItems"
         for item in items:
             query = {
@@ -211,8 +202,8 @@ class MusicBoardManager:
             )
 
             if response.status_code == 200:
-                added_items_responses.append(response.text)
-        return added_items_responses
+                added_checkitems.append(json.loads(response.text))
+        return added_checkitems
 
     def get_card(self, card_id: str) -> Optional[Dict[str, Any]]:
         """Get the card by its ID."""
@@ -227,9 +218,35 @@ class MusicBoardManager:
         response = self.make_request(url.format(id=card_id), "DELETE")
         return response.status_code == 200
 
+    def update_checkitem(
+        self,
+        card_id: str,
+        checkitem_id: str,
+        name: Optional[str] = None,
+        state: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        """Update a checkitem's name and/or state."""
+        if not name and not state:
+            return None
+
+        url = "https://api.trello.com/1/cards/{id}/checkItem/{idCheckItem}"
+
+        query = {}
+        if name:
+            query["name"] = name
+        if state:
+            query["state"] = state
+
+        response = self.make_request(
+            url.format(id=card_id, idCheckItem=checkitem_id), "PUT", query_params=query,
+        )
+
+        if response.status_code == 200:
+            return json.loads(response.text)
+
     def create_artist_card(
         self, artist: str, albums: List[str], pos: str = "bottom"
-    ) -> Optional[str]:
+    ) -> Optional[Dict[str, Any]]:
         """Create a new card for the given artist with a checklist for their albums."""
         card = self.create_card(self.artists_list["id"], artist, pos=pos)
 
@@ -242,30 +259,31 @@ class MusicBoardManager:
             self.delete_card(card["id"])
             return None
 
-        albums_checkitems = []
-        for album in albums:
-            album_card = self.create_album_card(artist, album)
-            if album_card and "shortUrl" in album_card:
-                albums_checkitems.append(album_card["shortUrl"])
-            else:
-                albums_checkitems.append(album)
+        if albums:
+            albums_checklist_items = []
+            for album in albums:
+                album_card = self.create_album_card(album, card["shortUrl"])
+                if album_card and "shortUrl" in album_card:
+                    albums_checklist_items.append(album_card["shortUrl"])
+                else:
+                    albums_checklist_items.append(album)
 
-        self.add_items_to_checklist(checklist["id"], albums_checkitems)
+            self.add_items_to_checklist(checklist["id"], albums_checklist_items)
 
-        return card["id"]
+        return card
 
-    def update_artist_albums(
-        self, artist: str, albums: List[str]
+    def add_new_albums_artist_card(
+        self, artist_card_id: str, artist_card_short_url: str, albums: List[str]
     ) -> Optional[List[str]]:
         """Add the given albums that aren't already on the artist's albums checklist."""
         if not albums:
             return None
 
-        albums_checklist = self.get_artist_albums_checklist(artist)
+        albums_checklist = self.get_artist_card_albums_checklist(artist_card_id)
 
         if albums_checklist:
-            albums_checkitems = self.get_artist_albums_checkitems(
-                artist, albums_checklist_id=albums_checklist["id"]
+            albums_checkitems = self.get_artist_card_albums_checkitems(
+                albums_checklist["id"]
             )
 
             current_albums = []
@@ -281,17 +299,20 @@ class MusicBoardManager:
 
             new_albums = [album for album in albums if album not in current_albums]
 
-            return self.add_items_to_checklist(albums_checklist["id"], new_albums)
+            new_albums_items = []
+            for album in new_albums:
+                album_card = self.create_album_card(album, artist_card_short_url)
+                if album_card:
+                    new_albums_items.append(album_card["shortUrl"])
+                else:
+                    new_albums_items.append(album)
+
+            return self.add_items_to_checklist(albums_checklist["id"], new_albums_items)
 
     def create_album_card(
-        self, artist: str, album: str, pos: str = "bottom"
+        self, album: str, artist_card_short_url: str, pos: str = "bottom"
     ) -> Optional[Dict[str, Any]]:
         """Create a card for the given album in the pending list."""
-        artist_card = self.get_artist_card(artist)
-
-        if not artist_card:
-            return None
-
         album_card = self.create_card(self.albums_pending_list["id"], album, pos=pos)
 
         if not album_card:
@@ -317,7 +338,7 @@ class MusicBoardManager:
 
         attachments_url = "https://api.trello.com/1/cards/{id}/attachments"
         attachments_query = {
-            "url": artist_card["shortUrl"],
+            "url": artist_card_short_url,
         }
         attachments_response = self.make_request(
             attachments_url.format(id=album_card["id"]),
@@ -331,36 +352,33 @@ class MusicBoardManager:
 
         return album_card
 
-    def create_missing_album_cards(self, artist: str) -> List[str]:
-        """Create missing linked cards for the artists' albums."""
-        albums_checklist = self.get_artist_albums_checklist(artist)
+    def create_linked_album_cards(
+        self, artist_card_id: str, artist_card_short_url: str
+    ) -> List[Dict[str, Any]]:
+        """Create linked cards for the artists' albums that are not linked already."""
+        albums_checklist = self.get_artist_card_albums_checklist(artist_card_id)
 
         if albums_checklist:
-            artist_card_id = albums_checklist.get("idCard", "")
-
-            albums_checkitems = self.get_artist_albums_checkitems(
-                artist, albums_checklist_id=albums_checklist["id"]
+            albums_checkitems = self.get_artist_card_albums_checkitems(
+                albums_checklist["id"]
             )
 
-            new_links = []
-            url = "https://api.trello.com/1/cards/{id}/checkItem/{idCheckItem}"
+            updated_checkitems = []
             for checkitem in albums_checkitems:
-                checkitem_id = checkitem.get("id", "")
-                name = checkitem["name"]
-                if not name.startswith("http"):
-                    album_card = self.create_album_card(artist, name)
+                album_name = checkitem["name"]
+                if not album_name.startswith("http"):
+                    album_card = self.create_album_card(
+                        album_name, artist_card_short_url
+                    )
                     if album_card and "shortUrl" in album_card:
-                        query = {
-                            "name": album_card["shortUrl"],
-                        }
-
-                        response = self.make_request(
-                            url.format(id=artist_card_id, idCheckItem=checkitem_id),
-                            "PUT",
-                            query_params=query,
+                        updated_checkitem = self.update_checkitem(
+                            artist_card_id,
+                            checkitem["id"],
+                            name=album_card["shortUrl"],
+                            state="incomplete",
                         )
 
-                        if response.status_code == 200:
-                            new_links.append(response.text)
+                        if updated_checkitem:
+                            updated_checkitems.append(updated_checkitem)
 
-            return new_links
+            return updated_checkitems
