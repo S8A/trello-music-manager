@@ -22,72 +22,68 @@ REQUIRED_CONFIG_VARS = [
 ]
 
 
-def load_data(
-    manager: MusicBoardManager, directory: str, albums_filename: str
-) -> Dict[str, Any]:
+def load_data(manager: MusicBoardManager, directory: str, albums_filename: str) -> None:
     """Load artists and albums from the given directory and report results."""
-    # Load data and create report
-    report = {}
     with cd(directory):
         artists = os.listdir()
         artists.sort()
 
-        artists_albums = {artist: [] for artist in artists}
-
-        for artist in artists_albums:
+        artists_albums = {}
+        for artist in artists:
             with cd(artist):
                 albums = read_file_lines_stripped(albums_filename)
                 artists_albums[artist] = albums
-        report["artists_albums"] = artists_albums
 
-        artists_cards = manager.get_artists_cards()
-        artists_cards_names = [card["name"] for card in artists_cards]
-        report["artists_cards"] = artists_cards
+        artists_cards = {card["name"]: card for card in manager.get_artists_cards()}
 
-        report["updated_artists_albums"] = {}
-        for artist in artists_cards_names:
-            albums = artists_albums.get(artist, [])
-            new_albums = manager.update_artist_albums(artist, albums)
-            if new_albums:
-                report["updated_artists_albums"][artist] = new_albums
+        new_artists_cards = {}
+        new_artists_albums_checkitems = {}
 
-        report["new_artists_albums"] = {}
         for artist, albums in artists_albums.items():
-            if artist not in artists_cards_names:
-                card_id = manager.create_artist_card(artist, albums)
-                if card_id:
-                    report["new_artists_albums"][artist] = albums
+            if artist not in artists_cards:
+                card = manager.create_artist_card(artist, albums)
+                if card:
+                    new_artists_cards[artist] = card
+            else:
+                artist_card = artists_cards[artist]
+                new_albums_checkitems = manager.add_new_albums_artist_card(
+                    artist_card["id"], artist_card["shortUrl"], albums
+                )
+                if new_albums_checkitems:
+                    new_artists_albums_checkitems[artist] = new_albums_checkitems
 
-        report["new_linked_cards"] = {}
-        for artist in artists_cards_names:
-            new_links = manager.create_missing_album_cards(artist)
-            if new_links:
-                report["new_linked_cards"][artist] = new_links
+        linked_albums_checkitems = {}
+        for artist in artists:
+            if artist in new_artists_cards:
+                card = new_artists_cards[artist]
+            elif artist in artists_cards:
+                card = artists_cards[artist]
+            else:
+                continue
 
-    # Print report summary
-    print(f"Total artists in directory: {len(report['artists_albums'])}")
-    print(f"Total artists in Trello list: {len(report['artists_cards'])}")
+            new_linked_checkitems = manager.create_linked_album_cards(
+                card["id"], card["shortUrl"]
+            )
+            if new_linked_checkitems:
+                linked_albums_checkitems[artist] = new_linked_checkitems
 
-    updated_artists = report["updated_artists_albums"]
-    print(f"Artist cards updated with new albums: {len(updated_artists)}")
-    if updated_artists:
-        for artist, new_albums in updated_artists.items():
-            print(f"\t{artist}\t{len(new_albums)} new albums")
+    print(f"Total artists in directory: {len(artists_albums)}")
+    print(f"Total artists already in Trello: {len(artists_cards)}")
 
-    new_artists = report["new_artists_albums"]
-    print(f"New artist cards: {len(new_artists)}")
-    if new_artists:
-        for artist, albums in new_artists.items():
-            print(f"\t{artist}\t({len(albums)} albums)")
+    print(f"New artist cards: {len(new_artists_cards)}")
+    if new_artists_cards:
+        for artist in new_artists_cards:
+            print(f"\t{artist}")
 
-    new_linked_artists = report["new_linked_cards"]
-    print(f"Artist cards with new linked album cards: {len(new_linked_artists)}")
-    if new_linked_artists:
-        for artist, new_links in new_linked_artists.items():
-            print(f"\t{artist}\t{len(new_links)} new linked album cards")
+    print(f"Artist cards updated with new albums: {len(new_artists_albums_checkitems)}")
+    if new_artists_albums_checkitems:
+        for artist, checkitems in new_artists_albums_checkitems.items():
+            print(f"\t{artist}\t{len(checkitems)} new albums")
 
-    # Return report data
-    return report
+    print(f"Artist cards with new linked album cards: {len(linked_albums_checkitems)}")
+    if linked_albums_checkitems:
+        for artist, checkitems in linked_albums_checkitems.items():
+            print(f"\t{artist}\t{len(checkitems)} new linked album cards")
 
 
 if __name__ == "__main__":
