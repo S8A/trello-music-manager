@@ -88,7 +88,7 @@ class MusicBoardManager:
             if trello_list["name"] == self.albums_done_list_name:
                 lists["albums_done"] = trello_list
 
-        for k, v in lists.values():
+        for k, v in lists.items():
             if not v:
                 raise MusicBoardManagerConfigError(f"Could not find {k} board.")
 
