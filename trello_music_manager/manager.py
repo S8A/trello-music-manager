@@ -44,6 +44,7 @@ class MusicBoardManager:
 
         self.albums_checklist_name = "Albums"
 
+        self.album_tasks_checklist_name = "Tasks"
         self.album_tasks = [
             "Download",
             "Add metadata",
@@ -206,7 +207,9 @@ class MusicBoardManager:
         if not album_card:
             return None
 
-        checklist = self.create_checklist(album_card["id"], "Tasks")
+        checklist = self.create_checklist(
+            album_card["id"], self.album_tasks_checklist_name
+        )
 
         if not checklist:
             self.delete_card(album_card["id"])
