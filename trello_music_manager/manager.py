@@ -42,6 +42,13 @@ class MusicBoardManager:
            "Accept": "application/json",
         }
 
+        self.album_tasks = [
+            "Download",
+            "Add metadata",
+            "Transfer to phone",
+            "Listen",
+        ]
+
         self.lists = self.get_board_lists()
 
     @property
@@ -224,15 +231,9 @@ class MusicBoardManager:
             self.delete_card(album_card["id"])
             return None
 
-        tasks = [
-            "Download",
-            "Add metadata",
-            "Transfer to phone",
-            "Listen",
-        ]
-        added_items = self.add_items_to_checklist(checklist["id"], tasks)
+        added_items = self.add_items_to_checklist(checklist["id"], self.album_tasks)
 
-        if len(added_items) != len(tasks):
+        if len(added_items) != len(self.album_tasks):
             self.delete_card(album_card["id"])
             return None
 
