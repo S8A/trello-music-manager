@@ -26,6 +26,7 @@ def load_data(
     manager: MusicBoardManager, directory: str, albums_filename: str
 ) -> Dict[str, Any]:
     """Load artists and albums from the given directory and report results."""
+    # Load data and create report
     report = {}
     with cd(directory):
         artists = os.listdir()
@@ -63,6 +64,29 @@ def load_data(
             if new_links:
                 report["new_linked_cards"][artist] = new_links
 
+    # Print report summary
+    print(f"Total artists in directory: {len(report['artists_albums'])}")
+    print(f"Total artists in Trello list: {len(report['artists_cards'])}")
+
+    updated_artists = report["updated_artists_albums"]
+    print(f"Artist cards updated with new albums: {len(updated_artists)}")
+    if updated_artists:
+        for artist, new_albums in updated_artists.items():
+            print(f"\t{artist}\t{len(new_albums)} new albums")
+
+    new_artists = report["new_artists_albums"]
+    print(f"New artist cards: {len(new_artists)}")
+    if new_artists:
+        for artist, albums in new_artists.items():
+            print(f"\t{artist}\t({len(albums)} albums)")
+
+    new_linked_artists = report["new_linked_cards"]
+    print(f"Artist cards with new linked album cards: {len(new_linked_artists)}")
+    if new_linked_artists:
+        for artist, new_links in new_linked_artists.items():
+            print(f"\t{artist}\t{len(new_links)} new linked album cards")
+
+    # Return report data
     return report
 
 
@@ -85,7 +109,6 @@ if __name__ == "__main__":
         if not config.get(required_variable, None):
             exit(1)
 
-
     manager = MusicBoardManager(
         config["TRELLO_API_KEY"],
         config["TRELLO_TOKEN"],
@@ -96,25 +119,4 @@ if __name__ == "__main__":
         config["ALBUMS_DONE_LIST"],
     )
 
-    report = load_data(manager, args.directory, config["ALBUMS_FILENAME"])
-
-    print(f"Total artists in directory: {len(report['artists_albums'])}")
-    print(f"Total artists in Trello list: {len(report['artists_cards'])}")
-
-    updated_artists = report["updated_artists_albums"]
-    print(f"Artist cards updated with new albums: {len(updated_artists)}")
-    if updated_artists:
-        for artist, new_albums in updated_artists.items():
-            print(f"\t{artist}\t{len(new_albums)} new albums")
-
-    new_artists = report["new_artists_albums"]
-    print(f"New artist cards: {len(new_artists)}")
-    if new_artists:
-        for artist, albums in new_artists.items():
-            print(f"\t{artist}\t({len(albums)} albums)")
-
-    new_linked_artists = report["new_linked_cards"]
-    print(f"Artist cards with new linked album cards: {len(new_linked_artists)}")
-    if new_linked_artists:
-        for artist, new_links in new_linked_artists.items():
-            print(f"\t{artist}\t{len(new_links)} new linked album cards")
+    load_data(manager, args.directory, config["ALBUMS_FILENAME"])
