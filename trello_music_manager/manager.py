@@ -130,26 +130,7 @@ class MusicBoardManager:
         self, artist_card_id: str
     ) -> Optional[Dict[str, Any]]:
         """Get the artist's albums checklist."""
-        checklists_url = "https://api.trello.com/1/cards/{id}/checklists"
-        response = self.make_request(checklists_url.format(id=artist_card_id), "GET")
-
-        if response.status_code == 200:
-            checklists = json.loads(response.text)
-            for checklist in checklists:
-                if "name" in checklist and checklist["name"] == "Albums":
-                    return checklist
-
-    def get_artist_card_albums_checkitems(
-        self, albums_checklist_id: str
-    ) -> Optional[List[Dict[str, Any]]]:
-        """Get the items of the given artist's card's albums checklist."""
-        checkitems_url = "https://api.trello.com/1/checklists/{id}/checkItems"
-        response = self.make_request(
-            checkitems_url.format(id=albums_checklist_id), "GET"
-        )
-
-        if response.status_code == 200:
-            return json.loads(response.text)
+        return self.get_checklist(artist_card_id, "Albums")
 
     def create_artist_card(
         self, artist: str, albums: List[str], pos: str = "bottom"
@@ -189,9 +170,7 @@ class MusicBoardManager:
         albums_checklist = self.get_artist_card_albums_checklist(artist_card_id)
 
         if albums_checklist:
-            albums_checkitems = self.get_artist_card_albums_checkitems(
-                albums_checklist["id"]
-            )
+            albums_checkitems = self.get_checkitems(albums_checklist["id"])
 
             current_albums = []
             for checkitem in albums_checkitems:
@@ -260,9 +239,7 @@ class MusicBoardManager:
         albums_checklist = self.get_artist_card_albums_checklist(artist_card_id)
 
         if albums_checklist:
-            albums_checkitems = self.get_artist_card_albums_checkitems(
-                albums_checklist["id"]
-            )
+            albums_checkitems = self.get_checkitems(albums_checklist["id"])
 
             updated_checkitems = []
             for checkitem in albums_checkitems:
@@ -336,6 +313,19 @@ class MusicBoardManager:
         if response.status_code == 200:
             return json.loads(response.text)
 
+    def get_checklist(
+        self, card_id: str, checklist_name: str
+    ) -> Optional[Dict[str, Any]]:
+        """Get a card's checklist with the specified name."""
+        checklists_url = "https://api.trello.com/1/cards/{id}/checklists"
+        response = self.make_request(checklists_url.format(id=card_id), "GET")
+
+        if response.status_code == 200:
+            checklists = json.loads(response.text)
+            for checklist in checklists:
+                if "name" in checklist and checklist["name"] == checklist_name:
+                    return checklist
+
     def add_items_to_checklist(
         self, checklist_id: str, items: List[str], pos: str = "bottom"
     ) -> List[Dict[str, Any]]:
@@ -354,6 +344,16 @@ class MusicBoardManager:
             if response.status_code == 200:
                 added_checkitems.append(json.loads(response.text))
         return added_checkitems
+
+    def get_checkitems(self, checklist_id: str) -> Optional[List[Dict[str, Any]]]:
+        """Get the items of the specified checklist."""
+        checkitems_url = "https://api.trello.com/1/checklists/{id}/checkItems"
+        response = self.make_request(
+            checkitems_url.format(id=checklist_id), "GET"
+        )
+
+        if response.status_code == 200:
+            return json.loads(response.text)
 
     def update_checkitem(
         self,
