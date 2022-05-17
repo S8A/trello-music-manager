@@ -237,6 +237,12 @@ class MusicBoardManager:
 
         return album_card
 
+    def get_album_card_tasks_checklist(
+        self, album_card_id: str
+    ) -> Optional[Dict[str, Any]]:
+        """Get the album's tasks checklist."""
+        return self.get_checklist(album_card_id, self.album_tasks_checklist_name)
+
     def create_linked_album_cards(
         self, artist_card_id: str, artist_card_short_url: str
     ) -> List[Dict[str, Any]]:
