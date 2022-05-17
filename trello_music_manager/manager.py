@@ -7,7 +7,14 @@ import requests
 
 class MusicBoardManagerConfigError(Exception):
     """Raised when the Trello music board manager is improperly configured."""
-    pass
+    
+    def __init__(self, message):
+        """Create a MusicBoardManagerConfigError with the given message."""
+        self.message = message
+        super().__init__(self.message)
+
+    def __str__(self) -> str:
+        return f"{self.__class__}: {self.message}"
 
 
 class MusicBoardManager:
