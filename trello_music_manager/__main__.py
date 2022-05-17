@@ -18,7 +18,6 @@ REQUIRED_CONFIG_VARS = [
     "ALBUMS_PENDING_LIST",
     "ALBUMS_DOING_LIST",
     "ALBUMS_DONE_LIST",
-    "ALBUMS_FILENAME",
 ]
 
 
@@ -92,13 +91,33 @@ if __name__ == "__main__":
         description="Manage Trello board of artists and albums.",
     )
     parser.add_argument(
-        "directory", help="Directory with artists' directories."
-    )
-    parser.add_argument(
         "--env-file",
         default=".env",
-        help="File which contains the required configuration variables."
+        help="file which contains the required configuration variables"
     )
+
+    subparsers = parser.add_subparsers(
+        title="valid subcommands",
+        help="subcommand help",
+        dest="subcommand",
+    )
+
+    load_data_parser = subparsers.add_parser(
+        name="load_data",
+        description="Load artists and albums from the given directory.",
+    )
+    load_data_parser.add_argument(
+        "directory", help="directory which contains artists' directories"
+    )
+    load_data_parser.add_argument(
+        "--albums-filename",
+        default="albums",
+        help=(
+            "name of text file within each artist directory which lists "
+            "that artist's albums"
+        )
+    )
+
     args = parser.parse_args()
 
     config = dotenv.dotenv_values(args.env_file)
@@ -119,4 +138,5 @@ if __name__ == "__main__":
     except MusicBoardManagerConfigError as e:
         print(e)
 
-    load_data(manager, args.directory, config["ALBUMS_FILENAME"])
+    if args.subcommand == "load_data":
+        load_data(manager, args.directory, args.albums_filename)
