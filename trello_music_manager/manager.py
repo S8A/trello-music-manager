@@ -425,6 +425,14 @@ class MusicBoardManager:
         if response.status_code == 200:
             return json.loads(response.text)
 
+    def delete_checkitem(self, card_id: str, checkitem_id: str,) -> bool:
+        """Update a checkitem's name and/or state."""
+        url = "https://api.trello.com/1/cards/{id}/checkItem/{idCheckItem}"
+        response = self.make_request(
+            url.format(id=card_id, idCheckItem=checkitem_id), "DELETE"
+        )
+        return response.status_code == 200
+
     def make_request(
         self, url: str, method: str, query_params: Optional[Dict[str, Any]] = None
     ) -> str:
