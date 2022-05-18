@@ -323,11 +323,14 @@ class MusicBoardManager:
         if response.status_code == 200:
             return json.loads(response.text)
 
-    def move_card(self, card_id: str, list_id: str) -> Optional[Dict[str, Any]]:
+    def move_card(
+        self, card_id: str, list_id: str, pos: str = "bottom"
+    ) -> Optional[Dict[str, Any]]:
         """Move a card to another list."""
         url = "https://api.trello.com/1/cards/{id}"
         query = {
             "idList": list_id,
+            "pos": pos,
         }
         response = self.make_request(url.format(id=card_id), "PUT", query_params=query)
 
