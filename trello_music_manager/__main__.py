@@ -10,6 +10,7 @@ from trello_music_manager.subcommand import (
     artist_status,
     complete_tasks,
     delete_album,
+    delete_artist,
     load_data,
     reset_tasks,
 )
@@ -84,12 +85,12 @@ if __name__ == "__main__":
     reset_tasks_parser.add_argument("artist", help="exact name of the artist")
     reset_tasks_parser.add_argument("album", help="exact name of the album")
 
-    delete_album_parser = subparsers.add_parser(
-        name="delete_album",
-        description="Delete an artist's album.",
+    delete_parser = subparsers.add_parser(
+        name="delete",
+        description="Delete an artist or a specific album.",
     )
-    delete_album_parser.add_argument("artist", help="exact name of the artist")
-    delete_album_parser.add_argument("album", help="exact name of the album")
+    delete_parser.add_argument("artist", help="exact name of the artist")
+    delete_parser.add_argument("album", nargs="?", help="exact name of the album")
 
     args = parser.parse_args()
 
@@ -126,6 +127,9 @@ if __name__ == "__main__":
     elif args.subcommand == "reset_tasks":
         success = reset_tasks(manager, args.artist, args.album)
         sys.exit(0 if success else 1)
-    elif args.subcommand == "delete_album":
-        success = delete_album(manager, args.artist, args.album)
+    elif args.subcommand == "delete":
+        if args.album:
+            success = delete_album(manager, args.artist, args.album)
+        else:
+            success = delete_artist(manager, args.artist)
         sys.exit(0 if success else 1)
