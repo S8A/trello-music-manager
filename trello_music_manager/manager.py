@@ -150,6 +150,8 @@ class MusicBoardManager:
                             album_card_id = name.split("/")[-1]
                             album_card = self.get_card(album_card_id)
                             if album_card:
+                                album_card["_artist_card_id"] = artist_card["id"]
+                                album_card["_checkitem_id"] = checkitem["id"]
                                 album_card["_checkitem_state"] = checkitem["state"]
                                 album_cards.append(album_card)
         return album_cards
