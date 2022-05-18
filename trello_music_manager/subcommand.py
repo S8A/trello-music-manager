@@ -91,47 +91,31 @@ def artist_status(manager: MusicBoardManager, artist: str) -> Optional[Dict[str,
         "albums": {},
     }
 
-    artist_card = manager.get_artist_card(artist)
-    if not artist_card:
-        print("Artist not found.")
-        return None
-    
     print(f"{artist} ::..")
 
-    albums_checklist = manager.get_artist_card_albums_checklist(artist_card["id"])
-    if not albums_checklist:
-        print("Albums checklist not found.")
+    album_cards = manager.get_album_cards(artist)
+
+    if not album_cards:
+        print("No albums found for the given artist.")
         return None
 
-    albums_checkitems = manager.get_checkitems(albums_checklist["id"])
-    if not albums_checkitems:
-        print("No albums found.")
-        return None
-    
-    for checkitem in albums_checkitems:
-        complete = checkitem["state"] == "complete"
-        name = checkitem["name"]
-        album = name
+    for album_card in album_cards:
+        album = album_card["name"]
+        complete = album_card["_checkitem_state"] == "complete"
         tasks_status = {task: None for task in manager.album_tasks}
 
-        if name.startswith("http"):
-            album_card_id = name.split("/")[-1]
-            album_card = manager.get_card(album_card_id)
-            if not album_card:
-                continue
+        tasks_checklist = manager.get_album_card_tasks_checklist(album_card["id"])
+        if not tasks_checklist:
+            continue
 
-            album = album_card["name"]
-
-            tasks_checklist = manager.get_album_card_tasks_checklist(album_card_id)
-            if not tasks_checklist:
-                continue
-
-            tasks_checkitems = manager.get_checkitems(tasks_checklist["id"])
-            if tasks_checkitems:
-                for task_checkitem in tasks_checkitems:
-                    task = task_checkitem["name"]
-                    if task in tasks_status:
-                        tasks_status[task] = task_checkitem["state"] == "complete"
+        tasks_checkitems = manager.get_checkitems(tasks_checklist["id"])
+        if not tasks_checkitems:
+            continue
+            
+        for task_checkitem in tasks_checkitems:
+            task = task_checkitem["name"]
+            if task in tasks_status:
+                tasks_status[task] = task_checkitem["state"] == "complete"
 
         report["albums"][album] = {
             "completed": complete,
@@ -162,52 +146,20 @@ def album_status(
     manager: MusicBoardManager, artist: str, album: str
 ) -> Optional[Dict[str, Any]]:
     """Show the status of an artist's album."""
+    album_card = manager.get_album_card(artist, album)
+
+    if not album_card:
+        print("Album card not found.")
+        return None
+
+    album_state = album_card["_checkitem_state"]
+
     report = {
         "artist": artist,
         "album": album,
-        "completed": None,
+        "completed": album_state == "complete",
         "tasks": {},
     }
-
-    artist_card = manager.get_artist_card(artist)
-    if not artist_card:
-        print("Artist not found.")
-        return None
-
-    albums_checklist = manager.get_artist_card_albums_checklist(artist_card["id"])
-    if not albums_checklist:
-        print("Albums checklist not found.")
-        return None
-
-    albums_checkitems = manager.get_checkitems(albums_checklist["id"])
-    if not albums_checkitems:
-        print("No albums found.")
-        return None
-    
-    album_card = None
-    album_state = "?"
-    for checkitem in albums_checkitems:
-        name = checkitem["name"]
-
-        if not name.startswith("http"):
-            print("Album card not linked.")
-            return None
-
-        album_card_id = name.split("/")[-1]
-        card = manager.get_card(album_card_id)
-        if not card:
-            continue
-
-        if card["name"] == album:
-            album_card = card
-            album_state = checkitem["state"]
-            break
-    
-    if not album_card:
-        print("Album not found.")
-        return None
-
-    report["completed"] = album_state == "complete"
 
     print(f"{artist} \u2013 {album} ::..")
     print()
