@@ -339,3 +339,29 @@ def reset_tasks(manager: MusicBoardManager, artist: str, album: str) -> bool:
     print("\u2713 Successfully reset album tasks.")
     print()
     return True
+
+def delete_album(manager: MusicBoardManager, artist: str, album: str) -> bool:
+    """Delete the specified album."""
+    album_card = manager.get_album_card(artist, album)
+    if not album_card:
+        print("Album card not found.")
+        return False
+
+    print(f"{artist} \u2013 {album} ::..")
+
+    deleted_album_card = manager.delete_card(album_card["id"])
+    if not deleted_album_card:
+        print("Could not delete album card.")
+        return False
+
+    deleted_album_checkitem = manager.delete_checkitem(
+        album_card["_artist_card_id"], album_card["_checkitem_id"]
+    )
+    if not deleted_album_checkitem:
+        print("Could not delete album from artist card.")
+        return False
+
+    print("\u2713 Successfully deleted album.")
+    print()
+
+    return True

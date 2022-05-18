@@ -6,7 +6,12 @@ import argparse
 import dotenv
 
 from trello_music_manager.subcommand import (
-    complete_tasks, load_data, artist_status, album_status, reset_tasks
+    album_status,
+    artist_status,
+    complete_tasks,
+    delete_album,
+    load_data,
+    reset_tasks,
 )
 from trello_music_manager.manager import MusicBoardManager, MusicBoardManagerConfigError
 
@@ -79,6 +84,13 @@ if __name__ == "__main__":
     reset_tasks_parser.add_argument("artist", help="exact name of the artist")
     reset_tasks_parser.add_argument("album", help="exact name of the album")
 
+    delete_album_parser = subparsers.add_parser(
+        name="delete_album",
+        description="Delete an artist's album.",
+    )
+    delete_album_parser.add_argument("artist", help="exact name of the artist")
+    delete_album_parser.add_argument("album", help="exact name of the album")
+
     args = parser.parse_args()
 
     config = dotenv.dotenv_values(args.env_file)
@@ -113,4 +125,7 @@ if __name__ == "__main__":
         sys.exit(1 if report is None else 0)
     elif args.subcommand == "reset_tasks":
         success = reset_tasks(manager, args.artist, args.album)
+        sys.exit(0 if success else 1)
+    elif args.subcommand == "delete_album":
+        success = delete_album(manager, args.artist, args.album)
         sys.exit(0 if success else 1)
