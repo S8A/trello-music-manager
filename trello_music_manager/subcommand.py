@@ -365,3 +365,36 @@ def delete_album(manager: MusicBoardManager, artist: str, album: str) -> bool:
     print()
 
     return True
+
+def delete_artist(manager: MusicBoardManager, artist: str) -> bool:
+    """Delete the specified artist and all their albums."""
+    album_cards = manager.get_album_cards(artist)
+    if not album_cards:
+        print("Album cards not found.")
+        return False
+
+    print(f"{artist} ::..")
+
+    deleted_all_album_cards = True
+    for album_card in album_cards:
+        album = album_card["name"]
+        deleted_album_card = manager.delete_card(album_card["id"])
+        if not deleted_album_card:
+            print(f"Could not delete album {album}.")
+            deleted_all_album_cards = False
+
+    if not deleted_all_album_cards:
+        print()
+        print("Some albums could not be deleted. Try again.")
+        return False
+
+    artist_card_id = album_cards[0]["_artist_card_id"]
+    deleted_artist_card = manager.delete_card(artist_card_id)
+    if not deleted_artist_card:
+        print("Could not delete artist card.")
+        return False
+
+    print("\u2713 Successfully deleted artist and all their albums.")
+    print()
+
+    return True
