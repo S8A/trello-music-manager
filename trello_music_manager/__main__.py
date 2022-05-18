@@ -1,6 +1,6 @@
 """Main module of the program."""
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import argparse
 import dotenv
@@ -85,6 +85,133 @@ def load_data(manager: MusicBoardManager, directory: str, albums_filename: str) 
             print(f"\t{artist}\t{len(checkitems)} new linked album cards")
 
 
+def artist_status(manager: MusicBoardManager, artist: str) -> None:
+    """Show the status of the artist's albums."""
+    artist_card = manager.get_artist_card(artist)
+    if not artist_card:
+        print("Artist not found.")
+        return None
+    
+    print(f"{artist} ::..")
+
+    albums_checklist = manager.get_artist_card_albums_checklist(artist_card["id"])
+    if not albums_checklist:
+        print("Albums checklist not found.")
+        return None
+
+    albums_checkitems = manager.get_checkitems(albums_checklist["id"])
+    if not albums_checkitems:
+        print("No albums found.")
+        return None
+    
+    for checkitem in albums_checkitems:
+        complete = checkitem["state"] == "complete"
+        name = checkitem["name"]
+        album = name
+        tasks_status = {task: None for task in manager.album_tasks}
+
+        if name.startswith("http"):
+            album_card_id = name.split("/")[-1]
+            album_card = manager.get_card(album_card_id)
+            if not album_card:
+                continue
+
+            album = album_card["name"]
+
+            tasks_checklist = manager.get_album_card_tasks_checklist(album_card_id)
+            if not tasks_checklist:
+                continue
+
+            tasks_checkitems = manager.get_checkitems(tasks_checklist["id"])
+            if tasks_checkitems:
+                for task_checkitem in tasks_checkitems:
+                    task = task_checkitem["name"]
+                    if task in tasks_status:
+                        tasks_status[task] = task_checkitem["state"] == "complete"
+
+        print("[", "\u2713" if complete else " ", "]", sep="", end="  |  ")
+        for task, task_complete in tasks_status.items():
+            if task_complete is None:
+                complete_mark = "?"
+            else:
+                complete_mark = "\u2713" if task_complete else "_"
+            print(complete_mark, sep="", end=" ")
+        print(end=" |  ")
+        print(album)
+
+    print()
+    print(
+        "Columns: Album completion status, album tasks' completion status, album title"
+    )
+    print("Tasks in order:", ", ".join(manager.album_tasks), sep=" ")
+    print()
+
+
+def album_status(manager: MusicBoardManager, artist: str, album: str) -> None:
+    """Show the status of an artist's album."""
+    artist_card = manager.get_artist_card(artist)
+    if not artist_card:
+        print("Artist not found.")
+        return None
+
+    albums_checklist = manager.get_artist_card_albums_checklist(artist_card["id"])
+    if not albums_checklist:
+        print("Albums checklist not found.")
+        return None
+
+    albums_checkitems = manager.get_checkitems(albums_checklist["id"])
+    if not albums_checkitems:
+        print("No albums found.")
+        return None
+    
+    album_card = None
+    album_state = "?"
+    for checkitem in albums_checkitems:
+        name = checkitem["name"]
+
+        if not name.startswith("http"):
+            print("Album card not linked.")
+            return None
+
+        album_card_id = name.split("/")[-1]
+        card = manager.get_card(album_card_id)
+        if not card:
+            continue
+
+        if card["name"] == album:
+            album_card = card
+            album_state = checkitem["state"]
+            break
+    
+    if not album_card:
+        print("Album not found.")
+        return None
+
+    print(f"{artist} \u2013 {album} ::..")
+    print()
+    print(f"State: {album_state}")
+    print()
+
+    tasks_checklist = manager.get_album_card_tasks_checklist(album_card["id"])
+    if not tasks_checklist:
+        print("Tasks checklist not found.")
+        return None
+
+    print("Tasks:")
+    tasks_checkitems = manager.get_checkitems(tasks_checklist["id"])
+    if not tasks_checkitems:
+        print("No tasks found.")
+        return None
+        
+    for task_checkitem in tasks_checkitems:
+        task = task_checkitem["name"]
+        complete = task_checkitem["state"] == "complete"
+        if task in manager.album_tasks:
+            print("[", "\u2713" if complete else " ", "]", sep="", end=" ")
+            print(task)
+    print()
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         prog="trello_music_manager",
@@ -118,6 +245,13 @@ if __name__ == "__main__":
         )
     )
 
+    status_parser = subparsers.add_parser(
+        name="status",
+        description="Check the completion status of an artist's album or albums.",
+    )
+    status_parser.add_argument("artist", help="exact name of the artist")
+    status_parser.add_argument("album", nargs="?", help="exact name of the album")
+
     args = parser.parse_args()
 
     config = dotenv.dotenv_values(args.env_file)
@@ -140,3 +274,8 @@ if __name__ == "__main__":
 
     if args.subcommand == "load_data":
         load_data(manager, args.directory, args.albums_filename)
+    elif args.subcommand == "status":
+        if args.album:
+            album_status(manager, args.artist, args.album)
+        else:
+            artist_status(manager, args.artist)
