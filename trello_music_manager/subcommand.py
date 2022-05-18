@@ -1,7 +1,7 @@
 """Subcommand functions."""
 
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import os
 
@@ -184,6 +184,106 @@ def album_status(
             report["tasks"][task] = complete
             print("[", "\u2713" if complete else " ", "]", sep="", end=" ")
             print(task)
+    print()
+
+    return report
+
+
+def complete_tasks(
+    manager: MusicBoardManager, artist: str, album: str, tasks: List[str]
+) -> Optional[Dict[str, Any]]:
+    """Mark the specified album's tasks as complete."""
+    if not tasks:
+        return complete_tasks(manager, artist, album, manager.album_tasks)
+    
+    for task in tasks:
+        if task not in manager.album_tasks:
+            print(f"Invalid task: {task}")
+            return None
+    
+    album_card = manager.get_album_card(artist, album)
+    if not album_card:
+        print("Album card not found.")
+        return None
+
+    print(f"{artist} \u2013 {album} ::..")
+
+    tasks_checklist = manager.get_album_card_tasks_checklist(album_card["id"])
+    if not tasks_checklist:
+        print("Tasks checklist not found.")
+        return None
+
+    tasks_checkitems = manager.get_checkitems(tasks_checklist["id"])
+    if not tasks_checkitems:
+        print("No tasks found.")
+        return None
+
+    tasks_completed = {task: False for task in manager.album_tasks}
+    for task_checkitem in tasks_checkitems:
+        task = task_checkitem["name"]
+        complete = task_checkitem["state"] == "complete"
+        if task in tasks and not complete:
+            updated_checkitem = manager.update_checkitem(
+                album_card["id"], task_checkitem["id"], state="complete"
+            )
+            if not updated_checkitem:
+                print(f"Could not mark task as complete: {task}")
+                return None
+            tasks_completed[task] = True
+        else:
+            tasks_completed[task] = complete
+
+    report = {
+        "artist": artist,
+        "album": album,
+        "completed": False,
+        "tasks": tasks_completed,
+    }
+
+    if all(tasks_completed.values()):
+        if album_card["idList"] != manager.albums_done_list["id"]:
+            moved_card = manager.move_card(
+                album_card["id"], manager.albums_done_list["id"], pos="top"
+            )
+            if not moved_card:
+                print(
+                    f"Could not move album card to '{manager.albums_done_list_name}'."
+                )
+        if album_card["_checkitem_state"] != "complete":
+            updated_checkitem = manager.update_checkitem(
+                album_card["_artist_card_id"],
+                album_card["_checkitem_id"],
+                state="complete",
+            )
+            if not updated_checkitem:
+                print("Could not mark album as complete in artist card.")
+
+        report["completed"] = True
+
+        print("\u2713 All tasks completed.")
+    elif any(tasks_completed.values()):
+        if album_card["idList"] != manager.albums_doing_list["id"]:
+            moved_card = manager.move_card(
+                album_card["id"], manager.albums_doing_list["id"], pos="top"
+            )
+            if not moved_card:
+                print(
+                    f"Could not move album card to '{manager.albums_doing_list_name}'."
+                )
+        if album_card["_checkitem_state"] != "incomplete":
+            updated_checkitem = manager.update_checkitem(
+                album_card["_artist_card_id"],
+                album_card["_checkitem_id"],
+                state="incomplete",
+            )
+            if not updated_checkitem:
+                print("Could not mark album as incomplete in artist card.")
+
+        report["completed"] = False
+        for task, completed in tasks_completed.items():
+            print("[", "\u2713" if completed else " ", "]", sep="", end=" ")
+            print(task)
+
     print()
 
     return report

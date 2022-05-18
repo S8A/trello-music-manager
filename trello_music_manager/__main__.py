@@ -5,9 +5,10 @@ import sys
 import argparse
 import dotenv
 
-from trello_music_manager.subcommand import load_data, artist_status, album_status
+from trello_music_manager.subcommand import (
+    complete_tasks, load_data, artist_status, album_status
+)
 from trello_music_manager.manager import MusicBoardManager, MusicBoardManagerConfigError
-from trello_music_manager.utils import cd, read_file_lines_stripped
 
 
 REQUIRED_CONFIG_VARS = [
@@ -61,6 +62,16 @@ if __name__ == "__main__":
     status_parser.add_argument("artist", help="exact name of the artist")
     status_parser.add_argument("album", nargs="?", help="exact name of the album")
 
+    complete_tasks_parser = subparsers.add_parser(
+        name="complete_tasks",
+        description="Mark tasks of an artist's album as complete.",
+    )
+    complete_tasks_parser.add_argument("artist", help="exact name of the artist")
+    complete_tasks_parser.add_argument("album", help="exact name of the album")
+    complete_tasks_parser.add_argument(
+        "tasks", nargs="*", metavar="task", help="tasks to mark as complete"
+    )
+
     args = parser.parse_args()
 
     config = dotenv.dotenv_values(args.env_file)
@@ -89,4 +100,7 @@ if __name__ == "__main__":
             report = album_status(manager, args.artist, args.album)
         else:
             report = artist_status(manager, args.artist)
+        sys.exit(1 if report is None else 0)
+    elif args.subcommand == "complete_tasks":
+        report = complete_tasks(manager, args.artist, args.album, args.tasks)
         sys.exit(1 if report is None else 0)
