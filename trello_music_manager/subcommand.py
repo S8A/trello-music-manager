@@ -111,7 +111,7 @@ def artist_status(manager: MusicBoardManager, artist: str) -> Optional[Dict[str,
         tasks_checkitems = manager.get_checkitems(tasks_checklist["id"])
         if not tasks_checkitems:
             continue
-            
+
         for task_checkitem in tasks_checkitems:
             task = task_checkitem["name"]
             if task in tasks_status:
@@ -176,7 +176,7 @@ def album_status(
     if not tasks_checkitems:
         print("No tasks found.")
         return None
-        
+
     for task_checkitem in tasks_checkitems:
         task = task_checkitem["name"]
         complete = task_checkitem["state"] == "complete"
@@ -195,12 +195,12 @@ def complete_tasks(
     """Mark the specified album's tasks as complete."""
     if not tasks:
         return complete_tasks(manager, artist, album, manager.album_tasks)
-    
+
     for task in tasks:
         if task not in manager.album_tasks:
             print(f"Invalid task: {task}")
             return None
-    
+
     album_card = manager.get_album_card(artist, album)
     if not album_card:
         print("Album card not found.")
@@ -335,7 +335,7 @@ def reset_tasks(manager: MusicBoardManager, artist: str, album: str) -> bool:
         if not updated_checkitem:
             print("Could not mark album as incomplete in artist card.")
             return False
-    
+
     print("\u2713 Successfully reset album tasks.")
     print()
     return True
