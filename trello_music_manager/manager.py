@@ -135,6 +135,34 @@ class MusicBoardManager:
         """Get the artist's albums checklist."""
         return self.get_checklist(artist_card_id, self.albums_checklist_name)
 
+    def get_album_cards(self, artist: str) -> List[Dict[str, Any]]:
+        """Get the list of album cards linked to the given artist."""
+        album_cards = []
+        artist_card = self.get_artist_card(artist)
+        if artist_card:
+            albums_checklist = self.get_artist_card_albums_checklist(artist_card["id"])
+            if albums_checklist:
+                albums_checkitems = self.get_checkitems(albums_checklist["id"])
+                if albums_checkitems:
+                    for checkitem in albums_checkitems:
+                        name = checkitem["name"]
+                        if name.startswith("http"):
+                            album_card_id = name.split("/")[-1]
+                            album_card = self.get_card(album_card_id)
+                            if album_card:
+                                album_card["_checkitem_state"] = checkitem["state"]
+                                album_cards.append(album_card)
+        return album_cards
+
+    def get_album_card(self, artist: str, album: str) -> Optional[Dict[str, Any]]:
+        """Get the card of the given artist's album."""
+        album_cards = self.get_album_cards(artist)
+        album_card = None
+        for card in album_cards:
+            if "name" in card and card["name"] == album:
+                album_card = card
+        return album_card
+
     def create_artist_card(
         self, artist: str, albums: List[str], pos: str = "bottom"
     ) -> Optional[Dict[str, Any]]:
