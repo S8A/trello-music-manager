@@ -21,7 +21,9 @@ REQUIRED_CONFIG_VARS = [
 ]
 
 
-def load_data(manager: MusicBoardManager, directory: str, albums_filename: str) -> None:
+def load_data(
+    manager: MusicBoardManager, directory: str, albums_filename: str
+) -> Dict[str, Any]:
     """Load artists and albums from the given directory and report results."""
     with cd(directory):
         artists = os.listdir()
@@ -66,6 +68,7 @@ def load_data(manager: MusicBoardManager, directory: str, albums_filename: str) 
             if new_linked_checkitems:
                 linked_albums_checkitems[artist] = new_linked_checkitems
 
+    print("Load data: Summary ::..")
     print(f"Total artists in directory: {len(artists_albums)}")
     print(f"Total artists already in Trello: {len(artists_cards)}")
 
@@ -84,9 +87,22 @@ def load_data(manager: MusicBoardManager, directory: str, albums_filename: str) 
         for artist, checkitems in linked_albums_checkitems.items():
             print(f"\t{artist}\t{len(checkitems)} new linked album cards")
 
+    report = {
+        "new_artists_cards": new_artists_cards,
+        "new_artists_albums_checkitems": new_artists_albums_checkitems,
+        "linked_albums_checkitems": linked_albums_checkitems,
+    }
 
-def artist_status(manager: MusicBoardManager, artist: str) -> None:
+    return report
+
+
+def artist_status(manager: MusicBoardManager, artist: str) -> Optional[Dict[str, Any]]:
     """Show the status of the artist's albums."""
+    report = {
+        "artist": artist,
+        "albums": {},
+    }
+
     artist_card = manager.get_artist_card(artist)
     if not artist_card:
         print("Artist not found.")
@@ -129,6 +145,11 @@ def artist_status(manager: MusicBoardManager, artist: str) -> None:
                     if task in tasks_status:
                         tasks_status[task] = task_checkitem["state"] == "complete"
 
+        report["albums"][album] = {
+            "completed": complete,
+            "tasks": tasks_status
+        }
+
         print("[", "\u2713" if complete else " ", "]", sep="", end="  |  ")
         for task, task_complete in tasks_status.items():
             if task_complete is None:
@@ -146,9 +167,20 @@ def artist_status(manager: MusicBoardManager, artist: str) -> None:
     print("Tasks in order:", ", ".join(manager.album_tasks), sep=" ")
     print()
 
+    return report
 
-def album_status(manager: MusicBoardManager, artist: str, album: str) -> None:
+
+def album_status(
+    manager: MusicBoardManager, artist: str, album: str
+) -> Optional[Dict[str, Any]]:
     """Show the status of an artist's album."""
+    report = {
+        "artist": artist,
+        "album": album,
+        "completed": None,
+        "tasks": {},
+    }
+
     artist_card = manager.get_artist_card(artist)
     if not artist_card:
         print("Artist not found.")
@@ -187,6 +219,8 @@ def album_status(manager: MusicBoardManager, artist: str, album: str) -> None:
         print("Album not found.")
         return None
 
+    report["completed"] = album_state == "complete"
+
     print(f"{artist} \u2013 {album} ::..")
     print()
     print(f"State: {album_state}")
@@ -207,9 +241,12 @@ def album_status(manager: MusicBoardManager, artist: str, album: str) -> None:
         task = task_checkitem["name"]
         complete = task_checkitem["state"] == "complete"
         if task in manager.album_tasks:
+            report["tasks"][task] = complete
             print("[", "\u2713" if complete else " ", "]", sep="", end=" ")
             print(task)
     print()
+
+    return report
 
 
 if __name__ == "__main__":
