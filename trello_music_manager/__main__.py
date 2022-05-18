@@ -1,5 +1,6 @@
 """Main module of the program."""
 
+import sys
 from typing import Any, Dict, Optional
 
 import argparse
@@ -311,8 +312,10 @@ if __name__ == "__main__":
 
     if args.subcommand == "load_data":
         load_data(manager, args.directory, args.albums_filename)
+        sys.exit(0)
     elif args.subcommand == "status":
         if args.album:
-            album_status(manager, args.artist, args.album)
+            report = album_status(manager, args.artist, args.album)
         else:
-            artist_status(manager, args.artist)
+            report = artist_status(manager, args.artist)
+        sys.exit(1 if report is None else 0)
