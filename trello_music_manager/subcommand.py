@@ -287,3 +287,55 @@ def complete_tasks(
     print()
 
     return report
+
+
+def reset_tasks(manager: MusicBoardManager, artist: str, album: str) -> bool:
+    """Reset all the album's tasks' status to incomplete."""
+    album_card = manager.get_album_card(artist, album)
+    if not album_card:
+        print("Album card not found.")
+        return False
+
+    print(f"{artist} \u2013 {album} ::..")
+
+    tasks_checklist = manager.get_album_card_tasks_checklist(album_card["id"])
+    if not tasks_checklist:
+        print("Tasks checklist not found.")
+        return False
+
+    tasks_checkitems = manager.get_checkitems(tasks_checklist["id"])
+    if not tasks_checkitems:
+        print("No tasks found.")
+        return False
+
+    for task_checkitem in tasks_checkitems:
+        task = task_checkitem["name"]
+        complete = task_checkitem["state"] == "complete"
+        if task in manager.album_tasks and complete:
+            updated_checkitem = manager.update_checkitem(
+                album_card["id"], task_checkitem["id"], state="incomplete"
+            )
+            if not updated_checkitem:
+                print(f"Could not mark task as incomplete: {task}")
+                return False
+
+    if album_card["idList"] != manager.albums_pending_list["id"]:
+        moved_card = manager.move_card(
+            album_card["id"], manager.albums_pending_list["id"], pos="top"
+        )
+        if not moved_card:
+            print(f"Could not move album card to '{manager.albums_pending_list_name}'.")
+            return False
+    if album_card["_checkitem_state"] != "incomplete":
+        updated_checkitem = manager.update_checkitem(
+            album_card["_artist_card_id"],
+            album_card["_checkitem_id"],
+            state="incomplete",
+        )
+        if not updated_checkitem:
+            print("Could not mark album as incomplete in artist card.")
+            return False
+    
+    print("\u2713 Successfully reset album tasks.")
+    print()
+    return True

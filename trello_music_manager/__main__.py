@@ -6,7 +6,7 @@ import argparse
 import dotenv
 
 from trello_music_manager.subcommand import (
-    complete_tasks, load_data, artist_status, album_status
+    complete_tasks, load_data, artist_status, album_status, reset_tasks
 )
 from trello_music_manager.manager import MusicBoardManager, MusicBoardManagerConfigError
 
@@ -72,6 +72,13 @@ if __name__ == "__main__":
         "tasks", nargs="*", metavar="task", help="tasks to mark as complete"
     )
 
+    reset_tasks_parser = subparsers.add_parser(
+        name="reset_tasks",
+        description="Mark all tasks of an artist's album as incomplete.",
+    )
+    reset_tasks_parser.add_argument("artist", help="exact name of the artist")
+    reset_tasks_parser.add_argument("album", help="exact name of the album")
+
     args = parser.parse_args()
 
     config = dotenv.dotenv_values(args.env_file)
@@ -104,3 +111,6 @@ if __name__ == "__main__":
     elif args.subcommand == "complete_tasks":
         report = complete_tasks(manager, args.artist, args.album, args.tasks)
         sys.exit(1 if report is None else 0)
+    elif args.subcommand == "reset_tasks":
+        success = reset_tasks(manager, args.artist, args.album)
+        sys.exit(0 if success else 1)
