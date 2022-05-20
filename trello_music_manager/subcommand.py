@@ -340,6 +340,7 @@ def reset_tasks(manager: MusicBoardManager, artist: str, album: str) -> bool:
     print()
     return True
 
+
 def delete_album(manager: MusicBoardManager, artist: str, album: str) -> bool:
     """Delete the specified album."""
     album_card = manager.get_album_card(artist, album)
@@ -365,6 +366,7 @@ def delete_album(manager: MusicBoardManager, artist: str, album: str) -> bool:
     print()
 
     return True
+
 
 def delete_artist(manager: MusicBoardManager, artist: str) -> bool:
     """Delete the specified artist and all their albums."""
