@@ -14,7 +14,7 @@ def load_data(
 ) -> Dict[str, Any]:
     """Load artists and albums from the given directory and report results."""
     with cd(directory):
-        artists = os.listdir()
+        artists = [f.name for f in os.scandir(directory) if f.is_dir()]
         artists.sort()
 
         artists_albums = {}
